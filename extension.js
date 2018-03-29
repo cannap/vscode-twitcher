@@ -7,11 +7,13 @@ const TwitchStatusBar = require('./src/TwitchStatusBar')
 const TwitchChatProvider = require('./src/TwitchChatProvider')
 function activate(context) {
   const twitcherConfig = workspace.getConfiguration('twitcher')
-  const terminal = window.createTerminal({ name: 'twitch' })
   if (!twitcherConfig.enabled) return
+  const twitchProvider = window.registerTreeDataProvider(
+    'twitcher',
+    twitchChatProvider
+  )
 
   const twitchChatProvider = new TwitchChatProvider()
-  window.registerTreeDataProvider('twitcher', twitchChatProvider)
   const tmiOptions = {
     options: {
       debug: twitcherConfig.debug
@@ -40,7 +42,6 @@ function activate(context) {
         },
         (err, res) => {
           //Todo: handle some error
-          terminal.sendText('wtf')
           const currentViewer = res.body.stream.viewers
           window.showInformationMessage(`Twitch user online: ${currentViewer}`)
           twitchStatusBar.setNewCounter(currentViewer)
@@ -55,10 +56,6 @@ function activate(context) {
   const messageTemplate = function(data) {
     return `${data.username}: ${data.message}`
   }
-
-  /**
-   * Statusbar
-   */
 
   bot.connect()
 
