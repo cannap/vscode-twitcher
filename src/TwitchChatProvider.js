@@ -14,7 +14,7 @@ module.exports = class TwitchChatView {
   addItem(user, message) {
     const currentDate = new Date()
     const timeStamp = `${currentDate.getHours()}:${currentDate.getMinutes()}`
-
+    //Todo: Add Hustory size
     const formatedMessage = `[${timeStamp}] ${user}: ${message}`
     const treeItem = new TreeItem(
       formatedMessage,

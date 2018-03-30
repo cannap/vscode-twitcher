@@ -2,39 +2,65 @@
   "name": "twitcher",
   "displayName": "twitcher",
   "description": "A Simple Chat for Twitch",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "publisher": "renkalabs",
   "engines": {
     "vscode": "^1.21.0"
   },
+  "galleryBanner": {
+    "color": "#6441a5",
+    "theme": "dark"
+  },
+  "icon": "resources/images/logo.png",
   "repository": "https://github.com/cannap/vscode-twitcher",
   "categories": ["Other"],
   "activationEvents": ["*"],
-  "main": "./extension",
+  "main": "./src/extension",
+  "keywords": ["twitch", "chat"],
   "contributes": {
     "menus": {
+      "view/title": [
+        {
+          "command": "twitcher.sendMessage",
+          "when": "view == twitcher/chat",
+          "group": "navigation"
+        }
+      ],
       "view/item/context": [
         {
-          "command": "twitcher.reply",
+          "command": "twitcher.explorerReply",
           "when": "view == twitcher/chat"
         }
       ]
     },
     "commands": [
       {
-        "command": "twitcher.reply",
-        "title": "Reply",
+        "command": "twitcher.setClientID",
+        "title": "Set Twitch Clientid",
         "category": "Twitcher"
+      },
+
+      {
+        "command": "twitcher.setOAuth",
+        "title": "Set Twitch OAuth Token",
+        "category": "Twitcher"
+      },
+      {
+        "command": "twitcher.explorerReply",
+        "title": "Reply"
       },
       {
         "command": "twitcher.refreshViewerCount",
-        "title": "Refresh Twitch Viewer count",
-        "category": "Twitcher"
+        "title": "Refresh Twitch Viewer count"
       },
       {
         "command": "twitcher.sendMessage",
-        "title": "Send",
-        "category": "Twitcher"
+        "category": "Twitcher",
+        "title": "Send a Message to Twitch",
+        "icon": {
+          "dark": "./resources/images/light_chat.svg",
+          "light": "./resources/images/dark_chat.svg"
+        }
       }
     ],
     "views": {
@@ -52,7 +78,7 @@
         }
       ]
     },
-    "keywords": ["twitch", "chat"],
+
     "configuration": {
       "type": "object",
       "properties": {
@@ -89,7 +115,7 @@
         "twitcher.channel": {
           "type": "string",
           "default": "",
-          "description": "channel defaults to username"
+          "description": "Twitch Channel without #"
         }
       }
     }
@@ -99,11 +125,12 @@
     "test": "node ./node_modules/vscode/bin/test"
   },
   "devDependencies": {
-    "typescript": "^2.6.1",
-    "vscode": "^1.1.6",
-    "eslint": "^4.11.0",
+    "@types/mocha": "^2.2.42",
     "@types/node": "^7.0.43",
-    "@types/mocha": "^2.2.42"
+    "eslint": "^4.11.0",
+    "eslint-config-standard": "^11.0.0",
+    "typescript": "^2.6.1",
+    "vscode": "^1.1.6"
   },
   "dependencies": {
     "application-config-path": "^0.1.0",

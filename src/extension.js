@@ -1,16 +1,19 @@
-const { window, workspace, commands, TreeItem } = require('vscode')
+const { window, workspace, commands } = require('vscode')
 const Tmi = require('tmi.js')
-const TwitchStatusBar = require('./src/TwitchStatusBar')
 const player = require('node-wav-player')
 const { resolve } = require('path')
 const ConfigStore = require('configstore')
-const TwitchChatProvider = require('./src/TwitchChatProvider')
+const localConfig = new ConfigStore('vscodetwitcher')
+const TwitchChatProvider = require('./TwitchChatProvider')
+const TwitchStatusBar = require('./TwitchStatusBar')
+
+const TWITCH_CHAT_OAUTH = 'TWITCH_CHAT_OAUTH'
+const TWITCH_CLIENT_ID = 'TWITCH_CLIENT_ID'
 
 async function activate(context) {
   const twitcherConfig = workspace.getConfiguration('twitcher')
 
   if (!twitcherConfig.enabled) return
-
   const config = await startupConfig()
   const tmiOptions = {
     options: {
@@ -31,33 +34,71 @@ async function activate(context) {
   const bot = new Tmi.client(tmiOptions)
   const twitchStatusBar = new TwitchStatusBar(twitcherConfig)
 
-  commands.registerCommand('twitcher.reply', async context => {
-    const userName = `@${context.label.split(':')[0]}`
-    const reply = await window.showInputBox({
-      prompt: userName
-    })
+  const oAuthCommand = commands.registerCommand(
+    'twitcher.setOAuth',
+    async () => {
+      const oAuth = await inputCommands.twitchChatOAuth()
+      if (oAuth) {
+        localConfig.set(TWITCH_CHAT_OAUTH, oAuth)
+        window.showInformationMessage('Twitch OAuth updated')
+      }
+    }
+  )
+  context.subscriptions.push(oAuthCommand)
+  const clientIDCommand = commands.registerCommand(
+    'twitcher.setClientID',
+    async () => {
+      const clientId = await inputCommands.twitchClientID()
+      if (clientId) {
+        localConfig.set(TWITCH_CLIENT_ID, clientId)
+        window.showInformationMessage('Twitch Client-ID updated')
+      }
+    }
+  )
+  context.subscriptions.push(clientIDCommand)
 
-    if (!reply) return
-    bot.say(twitcherConfig.channel, `${userName} ${reply}`)
-  })
+  const explorerReplyCommand = commands.registerCommand(
+    'twitcher.explorerReply',
+    async context => {
+      const userName = `@${context.label.split(':')[0]}`
+      const reply = await window.showInputBox({
+        prompt: userName
+      })
+
+      if (!reply) return
+      bot.say(twitcherConfig.channel, `${userName} ${reply}`)
+    }
+  )
+  context.subscriptions.push(explorerReplyCommand)
 
   if (config.clientID) {
-    commands.registerCommand('twitcher.refreshViewerCount', function() {
-      bot.api(
-        {
-          url: `https://api.twitch.tv/kraken/streams/${twitcherConfig.channel}`,
-          headers: {
-            'Client-ID': config.clientID
+    const refreshCommand = commands.registerCommand(
+      'twitcher.refreshViewerCount',
+      function() {
+        bot.api(
+          {
+            url: `https://api.twitch.tv/kraken/streams/${
+              twitcherConfig.channel
+            }`,
+            headers: {
+              'Client-ID': config.clientID
+            }
+          },
+          (err, res) => {
+            if (res.body.stream) {
+              const currentViewer = res.body.stream.viewers
+              window.showInformationMessage(
+                `Twitch user online: ${currentViewer}`
+              )
+              twitchStatusBar.setNewCounter(currentViewer)
+            } else {
+              twitchStatusBar.text('Offline')
+            }
           }
-        },
-        (err, res) => {
-          console.log(res.body)
-          const currentViewer = res.body.stream.viewers
-          window.showInformationMessage(`Twitch user online: ${currentViewer}`)
-          twitchStatusBar.setNewCounter(currentViewer)
-        }
-      )
-    })
+        )
+      }
+    )
+    context.subscriptions.push(refreshCommand)
   }
 
   const messageTemplate = function(data) {
@@ -65,6 +106,25 @@ async function activate(context) {
   }
 
   bot.connect()
+
+  const sendCommand = commands.registerCommand(
+    'twitcher.sendMessage',
+    async () => {
+      try {
+        const message = await window.showInputBox({
+          placeHolder: 'Message to send'
+        })
+
+        if (message) {
+          bot.say(twitcherConfig.channel, message)
+        }
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  )
+
+  context.subscriptions.push(sendCommand)
 
   bot.on('connected', () => {
     commands.executeCommand('twitcher.refreshViewerCount')
@@ -87,7 +147,13 @@ async function activate(context) {
     twitchStatusBar.decreaseCounter(1)
   })
 
-  let soundFile = resolve(__dirname, 'resources', 'audio', 'new_message.wav')
+  let soundFile = resolve(
+    __dirname,
+    '..',
+    'resources',
+    'audio',
+    'new_message.wav'
+  )
   if (typeof twitcherConfig.notificationSound !== 'boolean') {
     soundFile = resolve(twitcherConfig.notificationSound)
   }
@@ -97,9 +163,11 @@ async function activate(context) {
     switch (userstate['message-type']) {
       case 'chat':
         if (twitcherConfig.notificationSound) {
-          player.play({
-            path: soundFile
-          })
+          player
+            .play({
+              path: soundFile
+            })
+            .catch(err => console.error('AudioFileError', err))
         }
         twitchChatProvider.addItem(userstate.username, message)
         window
@@ -128,12 +196,6 @@ async function activate(context) {
 }
 
 async function startupConfig() {
-  let initalizeCommands = []
-  //Todo: way to delete
-  const TWITCH_CHAT_OAUTH = 'TWITCH_CHAT_OAUTH'
-  const TWITCH_CLIENT_ID = 'TWITCH_CLIENT_ID'
-
-  const localConfig = new ConfigStore('vscodetwitcher')
   let twitchChatOAuth = localConfig.get(TWITCH_CHAT_OAUTH)
   let twitchAppClientID = localConfig.get(TWITCH_CLIENT_ID)
 

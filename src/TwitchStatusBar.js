@@ -1,4 +1,4 @@
-const { window, StatusBarAlignment, commands, workspace } = require('vscode')
+const { window, StatusBarAlignment } = require('vscode')
 module.exports = class TwitchStatusBar {
   constructor(options) {
     this.counter = 0
@@ -7,10 +7,6 @@ module.exports = class TwitchStatusBar {
     this._statusBar = window.createStatusBarItem(StatusBarAlignment.Left)
 
     let tooltip = 'Click to update Viewer count'
-
-    if (!options.clientID) {
-      tooltip = 'Twitcher Clientid is missing'
-    }
 
     this._statusBar.tooltip = tooltip
     this._statusBar.command = 'twitcher.refreshViewerCount'
@@ -24,6 +20,14 @@ module.exports = class TwitchStatusBar {
   }
   get getCounter() {
     return this.counter
+  }
+
+  text(text, tooltip = false) {
+    this._statusBar.text = '$(broadcast)' + ' ' + text
+
+    if (tooltip) {
+      this._statusBar.tooltip = tooltip
+    }
   }
   increaseCounter(count) {
     this.counter += count
