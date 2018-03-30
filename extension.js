@@ -51,7 +51,7 @@ async function activate(context) {
           }
         },
         (err, res) => {
-          //Todo: handle some error
+          console.log(res.body)
           const currentViewer = res.body.stream.viewers
           window.showInformationMessage(`Twitch user online: ${currentViewer}`)
           twitchStatusBar.setNewCounter(currentViewer)
@@ -87,15 +87,20 @@ async function activate(context) {
     twitchStatusBar.decreaseCounter(1)
   })
 
+  let soundFile = resolve(__dirname, 'resources', 'audio', 'new_message.wav')
+  if (typeof twitcherConfig.notificationSound !== 'boolean') {
+    soundFile = resolve(twitcherConfig.notificationSound)
+  }
+
   bot.on('message', (channel, userstate, message, self) => {
     if (self && !twitcherConfig.debug) return
     switch (userstate['message-type']) {
       case 'chat':
-        console.log(typeof twitcherConfig.notificationSound)
-        player.play({
-          path: resolve(__dirname, 'resources', 'audio', 'new_message.wav')
-        })
-
+        if (twitcherConfig.notificationSound) {
+          player.play({
+            path: soundFile
+          })
+        }
         twitchChatProvider.addItem(userstate.username, message)
         window
           .showInformationMessage(

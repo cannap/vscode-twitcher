@@ -22,7 +22,7 @@
     "commands": [
       {
         "command": "twitcher.reply",
-        "title": "Reply to a User",
+        "title": "Reply",
         "category": "Twitcher"
       },
       {

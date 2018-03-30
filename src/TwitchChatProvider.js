@@ -12,7 +12,10 @@ module.exports = class TwitchChatView {
   }
 
   addItem(user, message) {
-    const formatedMessage = `${user}: ${message}`
+    const currentDate = new Date()
+    const timeStamp = `${currentDate.getHours()}:${currentDate.getMinutes()}`
+
+    const formatedMessage = `[${timeStamp}] ${user}: ${message}`
     const treeItem = new TreeItem(
       formatedMessage,
       TreeItemCollapsibleState.None
