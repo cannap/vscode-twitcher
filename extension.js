@@ -1,19 +1,21 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 const { window, workspace, commands, TreeItem } = require('vscode')
 const Tmi = require('tmi.js')
 const TwitchStatusBar = require('./src/TwitchStatusBar')
-// create player instance
+const player = require('node-wav-player')
+const { resolve } = require('path')
+const ConfigStore = require('configstore')
 const TwitchChatProvider = require('./src/TwitchChatProvider')
-function activate(context) {
+
+async function activate(context) {
   const twitcherConfig = workspace.getConfiguration('twitcher')
+
   if (!twitcherConfig.enabled) return
-  const twitchProvider = window.registerTreeDataProvider(
-    'twitcher',
-    twitchChatProvider
-  )
 
   const twitchChatProvider = new TwitchChatProvider()
+
+  const config = await startupConfig()
+
+  window.registerTreeDataProvider('twitcher/chat', twitchChatProvider)
   const tmiOptions = {
     options: {
       debug: twitcherConfig.debug
@@ -23,7 +25,7 @@ function activate(context) {
     },
     identity: {
       username: twitcherConfig.username,
-      password: twitcherConfig.oauth
+      password: config.oauth
     },
     channels: [`#${twitcherConfig.channel}`]
   }
@@ -37,7 +39,7 @@ function activate(context) {
         {
           url: `https://api.twitch.tv/kraken/streams/${twitcherConfig.channel}`,
           headers: {
-            'Client-ID': twitcherConfig.clientID
+            'Client-ID': config.clientID
           }
         },
         (err, res) => {
@@ -48,11 +50,8 @@ function activate(context) {
         }
       )
     })
-  } else {
-    window.showErrorMessage(
-      'Please add a client id to the settings ("twitcher.clientID": "xxx")'
-    )
   }
+
   const messageTemplate = function(data) {
     return `${data.username}: ${data.message}`
   }
@@ -81,6 +80,11 @@ function activate(context) {
   bot.on('message', (channel, userstate, message, self) => {
     switch (userstate['message-type']) {
       case 'chat':
+        console.log(typeof twitcherConfig.notificationSound)
+        player.play({
+          path: resolve(__dirname, 'resources', 'audio', 'new_message.wav')
+        })
+
         twitchChatProvider.addItem(message)
         window
           .showInformationMessage(
@@ -89,17 +93,16 @@ function activate(context) {
               username: userstate.username
             }),
             {
-              title: 'Answer'
+              title: 'reply'
             }
           )
-          .then(answer => {
-            if (answer) {
-              return window.showInputBox({
-                prompt: `answer -> ${userstate.username} to ${
-                  twitcherConfig.channel
-                }`
-              })
-            }
+          .then(reply => {
+            if (!reply) return
+            return window.showInputBox({
+              prompt: `answer -> ${userstate.username} to ${
+                twitcherConfig.channel
+              }`
+            })
           })
           .then(answer => {
             if (!answer) return
@@ -109,8 +112,56 @@ function activate(context) {
     }
   })
 }
+
+async function startupConfig() {
+  let initalizeCommands = []
+  //Todo: way to delete
+  const TWITCH_CHAT_OAUTH = 'TWITCH_CHAT_OAUTH'
+  const TWITCH_CLIENT_ID = 'TWITCH_CLIENT_ID'
+
+  const localConfig = new ConfigStore('vscodetwitcher')
+  let twitchChatOAuth = localConfig.get(TWITCH_CHAT_OAUTH)
+  let twitchAppClientID = localConfig.get(TWITCH_CLIENT_ID)
+
+  if (!twitchChatOAuth) {
+    twitchChatOAuth = await inputCommands.twitchChatOAuth()
+    if (twitchChatOAuth) {
+      localConfig.set(TWITCH_CHAT_OAUTH, twitchChatOAuth)
+    }
+  }
+  if (!twitchAppClientID || !twitchAppClientID === 'skip') {
+    twitchAppClientID = await inputCommands.twitchClientID()
+    if (twitchAppClientID) {
+      localConfig.set(TWITCH_CLIENT_ID, twitchAppClientID)
+    }
+  }
+  //no idea..
+  if (twitchAppClientID === 'skip') {
+    twitchAppClientID = undefined
+  }
+  return {
+    oauth: twitchChatOAuth,
+    clientID: twitchAppClientID
+  }
+}
 exports.activate = activate
 
+const inputCommands = {
+  twitchChatOAuth() {
+    return window.showInputBox({
+      password: true,
+      placeHolder: 'twitch chat oauth token',
+      prompt: 'required'
+    })
+  },
+  twitchClientID() {
+    return window.showInputBox({
+      password: true,
+      placeHolder: 'twitch app client-id',
+      prompt: 'not required enter skip to leave this field blank'
+    })
+  }
+}
 // this method is called when your extension is deactivated
 function deactivate() {}
 exports.deactivate = deactivate

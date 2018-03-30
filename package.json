@@ -16,13 +16,25 @@
         "command": "twitcher.refreshViewerCount",
         "title": "Refresh Twitch Viewer count",
         "category": "Twitch"
+      },
+      {
+        "command": "twitcher.sendMessage",
+        "title": "Send",
+        "category": "Twitch"
       }
     ],
     "views": {
       "explorer": [
         {
-          "id": "twitcher",
-          "name": "Twitcher"
+          "id": "twitcher/chat",
+          "name": "Twitch Chat",
+          "when": "config.twitcher.enabled == true"
+        },
+        {
+          "id": "twitcher/userlist",
+          "name": "Twitch users",
+          "when":
+            "config.twitcher.enabled == true && config.twitcher.userList == true"
         }
       ]
     },
@@ -30,11 +42,6 @@
     "configuration": {
       "type": "object",
       "properties": {
-        "twitcher.oauth": {
-          "type": "string",
-          "default": "",
-          "description": "Keep it secret!"
-        },
         "twitcher.hideStatusBar": {
           "type": "boolean",
           "default": false,
@@ -45,23 +52,25 @@
           "default": true,
           "description": "Enable Twitcher"
         },
+        "twitcher.userList": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show Userlist in Sidebar"
+        },
+        "twitcher.notificationSound": {
+          "type": ["boolean", "string"],
+          "default": true,
+          "description": "True or false you can also providate a wav file"
+        },
         "twitcher.debug": {
           "type": "boolean",
           "default": false,
           "description": "only for dev"
         },
-
         "twitcher.username": {
           "type": "string",
           "default": "twitcher",
           "description": "Username"
-        },
-
-        "twitcher.clientID": {
-          "type": "string",
-          "default": "",
-          "description":
-            "Client id is required read https://blog.twitch.tv/client-id-required-for-kraken-api-calls-afbb8e95f843"
         },
         "twitcher.channel": {
           "type": "string",
@@ -83,7 +92,10 @@
     "@types/mocha": "^2.2.42"
   },
   "dependencies": {
+    "application-config-path": "^0.1.0",
+    "configstore": "^3.1.2",
     "node-lame": "^1.0.6",
+    "node-wav-player": "0.0.1",
     "play-sound": "^1.1.2",
     "tmi.js": "^1.2.1",
     "twitch-bot": "^1.2.5"
