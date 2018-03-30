@@ -2,11 +2,12 @@
   "name": "twitcher",
   "displayName": "twitcher",
   "description": "A Simple Chat for Twitch",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "renkalabs",
   "engines": {
     "vscode": "^1.21.0"
   },
+  "repository": "https://github.com/cannap/vscode-twitcher",
   "categories": ["Other"],
   "activationEvents": ["*"],
   "main": "./extension",
