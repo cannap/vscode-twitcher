@@ -51,7 +51,8 @@
       },
       {
         "command": "twitcher.refreshViewerCount",
-        "title": "Refresh Twitch Viewer count"
+        "title": "Refresh Twitch Viewer count",
+        "category": "Twitcher"
       },
       {
         "command": "twitcher.sendMessage",

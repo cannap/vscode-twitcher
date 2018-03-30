@@ -1,6 +1,6 @@
 # Change Log
 
-## [1.0.x]
+## [1.1.0]
 
 * 🌟 Add an Icon to send a Message to twitch chat
 * 📦 Add Command to Set Oauth token (requires restart)
