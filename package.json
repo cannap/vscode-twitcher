@@ -11,16 +11,29 @@
   "activationEvents": ["*"],
   "main": "./extension",
   "contributes": {
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "twitcher.reply",
+          "when": "view == twitcher/chat"
+        }
+      ]
+    },
     "commands": [
+      {
+        "command": "twitcher.reply",
+        "title": "Reply to a User",
+        "category": "Twitcher"
+      },
       {
         "command": "twitcher.refreshViewerCount",
         "title": "Refresh Twitch Viewer count",
-        "category": "Twitch"
+        "category": "Twitcher"
       },
       {
         "command": "twitcher.sendMessage",
         "title": "Send",
-        "category": "Twitch"
+        "category": "Twitcher"
       }
     ],
     "views": {

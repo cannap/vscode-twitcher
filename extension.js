@@ -11,11 +11,7 @@ async function activate(context) {
 
   if (!twitcherConfig.enabled) return
 
-  const twitchChatProvider = new TwitchChatProvider()
-
   const config = await startupConfig()
-
-  window.registerTreeDataProvider('twitcher/chat', twitchChatProvider)
   const tmiOptions = {
     options: {
       debug: twitcherConfig.debug
@@ -29,11 +25,23 @@ async function activate(context) {
     },
     channels: [`#${twitcherConfig.channel}`]
   }
+  const twitchChatProvider = new TwitchChatProvider()
+  window.registerTreeDataProvider('twitcher/chat', twitchChatProvider)
 
   const bot = new Tmi.client(tmiOptions)
   const twitchStatusBar = new TwitchStatusBar(twitcherConfig)
 
-  if (twitcherConfig.clientID) {
+  commands.registerCommand('twitcher.reply', async context => {
+    const userName = `@${context.label.split(':')[0]}`
+    const reply = await window.showInputBox({
+      prompt: userName
+    })
+
+    if (!reply) return
+    bot.say(twitcherConfig.channel, `${userName} ${reply}`)
+  })
+
+  if (config.clientID) {
     commands.registerCommand('twitcher.refreshViewerCount', function() {
       bot.api(
         {
@@ -64,8 +72,10 @@ async function activate(context) {
   })
 
   /**
-   * Hande Join Part events to count users
+   * Hande Join Part events to count users join
+   * Todo: will not work on bigger channels add an interval to call the api
    */
+
   bot.on('join', (channel, username, self) => {
     if (self) return
     twitchStatusBar.increaseCounter(1)
@@ -78,6 +88,7 @@ async function activate(context) {
   })
 
   bot.on('message', (channel, userstate, message, self) => {
+    if (self && !twitcherConfig.debug) return
     switch (userstate['message-type']) {
       case 'chat':
         console.log(typeof twitcherConfig.notificationSound)
@@ -85,7 +96,7 @@ async function activate(context) {
           path: resolve(__dirname, 'resources', 'audio', 'new_message.wav')
         })
 
-        twitchChatProvider.addItem(message)
+        twitchChatProvider.addItem(userstate.username, message)
         window
           .showInformationMessage(
             messageTemplate({
@@ -99,9 +110,7 @@ async function activate(context) {
           .then(reply => {
             if (!reply) return
             return window.showInputBox({
-              prompt: `answer -> ${userstate.username} to ${
-                twitcherConfig.channel
-              }`
+              prompt: `@${userstate.username}`
             })
           })
           .then(answer => {

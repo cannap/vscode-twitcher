@@ -11,9 +11,14 @@ module.exports = class TwitchChatView {
     this._onDidChangeTreeData.fire()
   }
 
-  addItem(message) {
-    const treeItem = new TreeItem(message, TreeItemCollapsibleState.None)
-    treeItem.tooltip = message
+  addItem(user, message) {
+    const formatedMessage = `${user}: ${message}`
+    const treeItem = new TreeItem(
+      formatedMessage,
+      TreeItemCollapsibleState.None
+    )
+    treeItem.tooltip = formatedMessage
+
     this.chatlog.push(treeItem)
     this.refresh()
   }
