@@ -2,7 +2,7 @@
   "name": "twitcher",
   "displayName": "twitcher",
   "description": "A Simple Chat for Twitch",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "renkalabs",
   "engines": {
     "vscode": "^1.21.0"
