@@ -29,21 +29,12 @@ module.exports = class TwitchStatusBar {
       this._statusBar.tooltip = tooltip
     }
   }
-  increaseCounter(count) {
-    this.counter += count
-    this.setNewCounter()
-  }
-  decreaseCounter(count) {
-    this.counter -= count
-
-    if (this.counter < 0) {
-      this.setNewCounter(0)
-    } else {
-      this.setNewCounter()
-    }
-  }
 
   setNewCounter(counter = false) {
     this._statusBar.text = `${this.statucBarIcon} ${counter || this.counter}`
+  }
+
+  get statusBarItem() {
+    return this._statusBar
   }
 }

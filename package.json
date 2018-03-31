@@ -1,8 +1,8 @@
 {
   "name": "twitcher",
-  "displayName": "twitcher",
+  "displayName": "Twitcher",
   "description": "A Simple Chat for Twitch",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "publisher": "renkalabs",
   "engines": {
     "vscode": "^1.21.0"
@@ -21,15 +21,26 @@
     "menus": {
       "view/title": [
         {
+          "command": "twitcher.switchToUserList",
+          "when": "view == twitcher",
+          "group": "navigation"
+        },
+        {
           "command": "twitcher.sendMessage",
-          "when": "view == twitcher/chat",
+          "when": "view == twitcher",
+          "group": "navigation"
+        },
+
+        {
+          "command": "twitcher.switchToChat",
+          "when": "view == twitcher",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
           "command": "twitcher.explorerReply",
-          "when": "view == twitcher/chat"
+          "when": "view == twitcher"
         }
       ]
     },
@@ -39,7 +50,6 @@
         "title": "Set Twitch Clientid",
         "category": "Twitcher"
       },
-
       {
         "command": "twitcher.setOAuth",
         "title": "Set Twitch OAuth Token",
@@ -55,31 +65,45 @@
         "category": "Twitcher"
       },
       {
+        "command": "twitcher.switchToUserList",
+        "title": "Show Viewers",
+        "icon": {
+          "dark": "./resources/images/light_userlist.svg",
+          "light": "./resources/images/dark_userlist.svg"
+        }
+      },
+      {
+        "command": "twitcher.switchToChat",
+        "title": "Show Chat",
+        "icon": {
+          "dark": "./resources/images/light_chat.svg",
+          "light": "./resources/images/dark_chat.svg"
+        }
+      },
+      {
+        "command": "twitcher.clearConfig",
+        "title": "Clears OAuth and Clientid from the config",
+        "category": "Twitcher"
+      },
+      {
         "command": "twitcher.sendMessage",
         "category": "Twitcher",
         "title": "Send a Message to Twitch",
         "icon": {
-          "dark": "./resources/images/light_chat.svg",
-          "light": "./resources/images/dark_chat.svg"
+          "dark": "./resources/images/light_input.svg",
+          "light": "./resources/images/dark_input.svg"
         }
       }
     ],
     "views": {
       "explorer": [
         {
-          "id": "twitcher/chat",
+          "id": "twitcher",
           "name": "Twitch Chat",
           "when": "config.twitcher.enabled == true"
-        },
-        {
-          "id": "twitcher/userlist",
-          "name": "Twitch users",
-          "when":
-            "config.twitcher.enabled == true && config.twitcher.userList == true"
         }
       ]
     },
-
     "configuration": {
       "type": "object",
       "properties": {
@@ -87,6 +111,17 @@
           "type": "boolean",
           "default": false,
           "description": "Hides the Twitch online count in the statusbar"
+        },
+        "twitcher.twitchLoginName": {
+          "type": "string",
+          "default": "",
+          "description": "Twitch user login name required for api calls"
+        },
+        "twitcher.counterUpdateInterval": {
+          "type": ["string", "boolean"],
+          "default": "3m",
+          "description":
+            "You can use this time formats https://github.com/zeit/ms"
         },
         "twitcher.enabled": {
           "type": "boolean",
@@ -135,7 +170,10 @@
   },
   "dependencies": {
     "application-config-path": "^0.1.0",
+    "axios": "^0.18.0",
     "configstore": "^3.1.2",
+    "lodash": "^4.17.5",
+    "ms": "^2.1.1",
     "node-lame": "^1.0.6",
     "node-wav-player": "0.0.1",
     "play-sound": "^1.1.2",

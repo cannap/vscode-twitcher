@@ -6,15 +6,35 @@ const ConfigStore = require('configstore')
 const localConfig = new ConfigStore('vscodetwitcher')
 const TwitchChatProvider = require('./TwitchChatProvider')
 const TwitchStatusBar = require('./TwitchStatusBar')
-
+const TwitchApi = require('./TwitchApi')
 const TWITCH_CHAT_OAUTH = 'TWITCH_CHAT_OAUTH'
 const TWITCH_CLIENT_ID = 'TWITCH_CLIENT_ID'
+let viewerCountUpdater = false
+const ms = require('ms')
 
+//Todo: Clean the whole mess xD
 async function activate(context) {
   const twitcherConfig = workspace.getConfiguration('twitcher')
 
   if (!twitcherConfig.enabled) return
+  //#region config
   const config = await startupConfig()
+
+  if (!config.oauth) {
+    const message = await window.showErrorMessage(
+      'Please Enter a Oauth token for twitch',
+      { title: 'Enter Oauth' }
+    )
+
+    if (message) {
+      const oAuthToken = await inputCommands.twitchChatOAuth()
+      if (oAuthToken) {
+        localConfig.set(TWITCH_CHAT_OAUTH, oAuthToken)
+        config.oauth = oAuthToken
+      }
+    }
+  }
+
   const tmiOptions = {
     options: {
       debug: twitcherConfig.debug
@@ -28,12 +48,39 @@ async function activate(context) {
     },
     channels: [`#${twitcherConfig.channel}`]
   }
-  const twitchChatProvider = new TwitchChatProvider()
-  window.registerTreeDataProvider('twitcher/chat', twitchChatProvider)
+  //#endregion
 
+  /**
+   * Initalize
+   */
   const bot = new Tmi.client(tmiOptions)
   const twitchStatusBar = new TwitchStatusBar(twitcherConfig)
+  const twitchApi = new TwitchApi(config.clientID)
+  bot.connect()
 
+  /**
+   * Register Data provider
+   */
+  const twitchChatProvider = new TwitchChatProvider()
+  window.registerTreeDataProvider('twitcher', twitchChatProvider)
+  if (twitcherConfig.counterUpdateInterval) {
+    viewerCountUpdater = setInterval(() => {},
+    ms(twitcherConfig.counterUpdateInterval))
+  }
+
+  //#region Register Commands
+  const clearConfig = commands.registerCommand('twitcher.clearConfig', () => {
+    localConfig.clear()
+  })
+  context.subscriptions.push(clearConfig)
+
+  const switchToChatCommand = commands.registerCommand(
+    'twitcher.switchToChat',
+    () => {
+      twitchChatProvider.enableChat()
+    }
+  )
+  context.subscriptions.push(switchToChatCommand)
   const oAuthCommand = commands.registerCommand(
     'twitcher.setOAuth',
     async () => {
@@ -74,39 +121,23 @@ async function activate(context) {
   if (config.clientID) {
     const refreshCommand = commands.registerCommand(
       'twitcher.refreshViewerCount',
-      function() {
-        bot.api(
-          {
-            url: `https://api.twitch.tv/kraken/streams/${
-              twitcherConfig.channel
-            }`,
-            headers: {
-              'Client-ID': config.clientID
-            }
-          },
-          (err, res) => {
-            if (res.body.stream) {
-              const currentViewer = res.body.stream.viewers
-              window.showInformationMessage(
-                `Twitch user online: ${currentViewer}`
-              )
-              twitchStatusBar.setNewCounter(currentViewer)
-            } else {
-              twitchStatusBar.text('Offline')
-            }
-          }
-        )
+      async () => {
+        const viewerCount = await twitchApi.getViewerCount()
+        twitchStatusBar.setNewCounter(viewerCount)
       }
     )
     context.subscriptions.push(refreshCommand)
   }
 
-  const messageTemplate = function(data) {
-    return `${data.username}: ${data.message}`
-  }
-
-  bot.connect()
-
+  const switchToUserListCommand = commands.registerCommand(
+    'twitcher.switchToUserList',
+    async () => {
+      const userlist = await twitchApi.getViewerList()
+      twitchChatProvider.loadUserList(userlist)
+      twitchStatusBar.setNewCounter(userlist.length)
+    }
+  )
+  context.subscriptions.push(switchToUserListCommand)
   const sendCommand = commands.registerCommand(
     'twitcher.sendMessage',
     async () => {
@@ -119,32 +150,17 @@ async function activate(context) {
           bot.say(twitcherConfig.channel, message)
         }
       } catch (error) {
-        console.error(error)
+        console.error('Failed to send Message', error)
+        window.showErrorMessage('Failed to Send Message')
       }
     }
   )
 
   context.subscriptions.push(sendCommand)
-
+  //#endregion
   bot.on('connected', () => {
     commands.executeCommand('twitcher.refreshViewerCount')
     window.showInformationMessage(`Connected to: ${twitcherConfig.channel}`)
-  })
-
-  /**
-   * Hande Join Part events to count users join
-   * Todo: will not work on bigger channels add an interval to call the api
-   */
-
-  bot.on('join', (channel, username, self) => {
-    if (self) return
-    twitchStatusBar.increaseCounter(1)
-  })
-
-  bot.on('part', (channel, username, self) => {
-    if (self) return
-
-    twitchStatusBar.decreaseCounter(1)
   })
 
   let soundFile = resolve(
@@ -158,59 +174,46 @@ async function activate(context) {
     soundFile = resolve(twitcherConfig.notificationSound)
   }
 
-  bot.on('message', (channel, userstate, message, self) => {
+  bot.on('message', async (channel, userstate, message, self) => {
     if (self && !twitcherConfig.debug) return
+    //Todo: Add Filter
     switch (userstate['message-type']) {
       case 'chat':
         if (twitcherConfig.notificationSound) {
-          player
-            .play({
-              path: soundFile
-            })
-            .catch(err => console.error('AudioFileError', err))
+          twitchChatProvider.addChatItem(userstate.username, message)
+
+          await player.play({
+            path: soundFile
+          })
         }
-        twitchChatProvider.addItem(userstate.username, message)
-        window
-          .showInformationMessage(
-            messageTemplate({
-              message,
-              username: userstate.username
-            }),
-            {
-              title: 'reply'
-            }
+
+        const reply = await window.showInformationMessage(
+          `${userstate.username}: ${message}`,
+          {
+            title: 'reply'
+          }
+        )
+
+        if (reply) {
+          const replyText = await window.showInputBox({
+            prompt: `@${userstate.username}`
+          })
+          if (!replyText) return
+          bot.say(
+            twitcherConfig.channel,
+            `@${userstate.username}: ${replyText}`
           )
-          .then(reply => {
-            if (!reply) return
-            return window.showInputBox({
-              prompt: `@${userstate.username}`
-            })
-          })
-          .then(answer => {
-            if (!answer) return
-            bot.say(twitcherConfig.channel, `@${userstate.username}: ${answer}`)
-          })
+        }
+
         break
     }
   })
 }
 
-async function startupConfig() {
+function startupConfig() {
   let twitchChatOAuth = localConfig.get(TWITCH_CHAT_OAUTH)
   let twitchAppClientID = localConfig.get(TWITCH_CLIENT_ID)
 
-  if (!twitchChatOAuth) {
-    twitchChatOAuth = await inputCommands.twitchChatOAuth()
-    if (twitchChatOAuth) {
-      localConfig.set(TWITCH_CHAT_OAUTH, twitchChatOAuth)
-    }
-  }
-  if (!twitchAppClientID || !twitchAppClientID === 'skip') {
-    twitchAppClientID = await inputCommands.twitchClientID()
-    if (twitchAppClientID) {
-      localConfig.set(TWITCH_CLIENT_ID, twitchAppClientID)
-    }
-  }
   //no idea..
   if (twitchAppClientID === 'skip') {
     twitchAppClientID = undefined
@@ -220,7 +223,6 @@ async function startupConfig() {
     clientID: twitchAppClientID
   }
 }
-exports.activate = activate
 
 const inputCommands = {
   twitchChatOAuth() {
@@ -239,5 +241,10 @@ const inputCommands = {
   }
 }
 // this method is called when your extension is deactivated
-function deactivate() {}
+function deactivate() {
+  if (viewerCountUpdater) {
+    clearInterval(viewerCountUpdater)
+  }
+}
+exports.activate = activate
 exports.deactivate = deactivate
