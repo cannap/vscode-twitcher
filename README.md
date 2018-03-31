@@ -14,17 +14,23 @@ Add simple Twitch Chat to Vscode in Explorer
 * Reply to a User
 * Send a Message to a user from the Viewerlist
 
-## Requirements
+## ❔ Requirements
 
 * Twitch OAuth https://twitchapps.com/tmi/
 * Twitch app client id https://dev.twitch.tv/dashboard/apps/create just enter http://localhost as url
 
-## Setup
+## 🌱 Setup
 
-When the Extensions starts the first time you get asked for OAuth and Client-id(optional).
-You can Skip the Client id by writting "skip"
+Open Command Palette
 
-## Settings
+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>
+
+Search for Twitcher
+
+Then you can Set Client-id and oauth
+after settings updated you need to restart vscode
+
+## 🔑 Settings
 
 | Key                              | Default | Description                                                           | Required |
 | -------------------------------- | ------- | --------------------------------------------------------------------- | -------- |
@@ -36,7 +42,7 @@ You can Skip the Client id by writting "skip"
 | `twitcher.hideStatusBar`         | false   | hides Twitch viewer count                                             |          |
 | `twitcher.counterUpdateInterval` | 3m      | Disable with false or set a other interval `10m` for every 10 minutes |          |
 
-## Commands
+## ⌨️ Commands
 
 via "Twitcher"
 
@@ -46,6 +52,7 @@ via "Twitcher"
 * `twitcher.refreshViewerCount` refreshes the counte requires Clientid
 * `twitcher.clearConfig` remove client-id and oauth from the internal config file
 
-## Todos
+## 👷 Todos
 
 * Noticiation only when mentionen or keyword based
+* Feedback when Viewers are updating because slow api
