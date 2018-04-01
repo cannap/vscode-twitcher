@@ -2,12 +2,9 @@ const { window, StatusBarAlignment } = require('vscode')
 module.exports = class TwitchStatusBar {
   constructor(options) {
     this.counter = 0
-
     this.statucBarIcon = '$(broadcast)'
     this._statusBar = window.createStatusBarItem(StatusBarAlignment.Left)
-
     let tooltip = 'Click to update Viewer count'
-
     this._statusBar.tooltip = tooltip
     this._statusBar.command = 'twitcher.refreshViewerCount'
 
@@ -24,7 +21,6 @@ module.exports = class TwitchStatusBar {
 
   text(text, tooltip = false) {
     this._statusBar.text = '$(broadcast)' + ' ' + text
-
     if (tooltip) {
       this._statusBar.tooltip = tooltip
     }
@@ -33,7 +29,6 @@ module.exports = class TwitchStatusBar {
   setNewCounter(counter = false) {
     this._statusBar.text = `${this.statucBarIcon} ${counter || this.counter}`
   }
-
   get statusBarItem() {
     return this._statusBar
   }

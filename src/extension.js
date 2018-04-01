@@ -1,16 +1,18 @@
 const { window, workspace, commands } = require('vscode')
 const Tmi = require('tmi.js')
-const player = require('node-wav-player')
+
 const { resolve } = require('path')
 const ConfigStore = require('configstore')
+const ms = require('ms')
+const Notification = require('./Notification')
 const localConfig = new ConfigStore('vscodetwitcher')
-const TwitchChatProvider = require('./TwitchChatProvider')
+const TwticherExplorerProvider = require('./TwitchExplorerProvider')
 const TwitchStatusBar = require('./TwitchStatusBar')
 const TwitchApi = require('./TwitchApi')
 const TWITCH_CHAT_OAUTH = 'TWITCH_CHAT_OAUTH'
 const TWITCH_CLIENT_ID = 'TWITCH_CLIENT_ID'
+
 let viewerCountUpdater = false
-const ms = require('ms')
 
 //Todo: Clean the whole mess xD
 async function activate(context) {
@@ -18,24 +20,24 @@ async function activate(context) {
 
   if (!twitcherConfig.enabled) return
   //#region config
-  const config = await startupConfig()
+  const twitchConfig = await startupConfig()
 
-  if (!config.oauth) {
-    const message = await window.showErrorMessage(
+  if (!twitchConfig.oauth) {
+    const askForOAuth = await window.showErrorMessage(
       'Please Enter a Oauth token for twitch',
       { title: 'Enter Oauth' }
     )
 
-    if (message) {
-      const oAuthToken = await inputCommands.twitchChatOAuth()
-      if (oAuthToken) {
-        localConfig.set(TWITCH_CHAT_OAUTH, oAuthToken)
-        config.oauth = oAuthToken
+    if (askForOAuth) {
+      const twitchOAuth = await inputCommands.twitchChatOAuth()
+      if (twitchOAuth) {
+        localConfig.set(TWITCH_CHAT_OAUTH, twitchOAuth)
+        twitchConfig.oauth = twitchOAuth
       }
     }
   }
 
-  const tmiOptions = {
+  const twitchChatConfig = {
     options: {
       debug: twitcherConfig.debug
     },
@@ -44,7 +46,7 @@ async function activate(context) {
     },
     identity: {
       username: twitcherConfig.username,
-      password: config.oauth
+      password: twitchConfig.oauth
     },
     channels: [`#${twitcherConfig.channel}`]
   }
@@ -53,16 +55,30 @@ async function activate(context) {
   /**
    * Initalize
    */
-  const bot = new Tmi.client(tmiOptions)
+  const bot = new Tmi.client(twitchChatConfig)
   const twitchStatusBar = new TwitchStatusBar(twitcherConfig)
-  const twitchApi = new TwitchApi(config.clientID)
+  const twitchApi = new TwitchApi(twitchConfig.clientID)
+
+  let soundFile = false
+  if (typeof twitcherConfig.notificationSound !== 'boolean') {
+    soundFile = resolve(twitcherConfig.notificationSound)
+  } else if (twitcherConfig.notificationSound) {
+    soundFile = resolve(
+      __dirname,
+      '..',
+      'resources',
+      'audio',
+      'new_message.wav'
+    )
+  }
+  const notification = new Notification(soundFile)
   bot.connect()
 
   /**
    * Register Data provider
    */
-  const twitchChatProvider = new TwitchChatProvider()
-  window.registerTreeDataProvider('twitcher', twitchChatProvider)
+  const twitcherExplorerProvider = new TwticherExplorerProvider()
+  window.registerTreeDataProvider('twitcher', twitcherExplorerProvider)
   if (twitcherConfig.counterUpdateInterval) {
     viewerCountUpdater = setInterval(() => {},
     ms(twitcherConfig.counterUpdateInterval))
@@ -77,16 +93,16 @@ async function activate(context) {
   const switchToChatCommand = commands.registerCommand(
     'twitcher.switchToChat',
     () => {
-      twitchChatProvider.enableChat()
+      twitcherExplorerProvider.enableChat()
     }
   )
   context.subscriptions.push(switchToChatCommand)
   const oAuthCommand = commands.registerCommand(
     'twitcher.setOAuth',
     async () => {
-      const oAuth = await inputCommands.twitchChatOAuth()
-      if (oAuth) {
-        localConfig.set(TWITCH_CHAT_OAUTH, oAuth)
+      const oAuthToken = await inputCommands.twitchChatOAuth()
+      if (oAuthToken) {
+        localConfig.set(TWITCH_CHAT_OAUTH, oAuthToken)
         window.showInformationMessage('Twitch OAuth updated')
       }
     }
@@ -95,9 +111,9 @@ async function activate(context) {
   const clientIDCommand = commands.registerCommand(
     'twitcher.setClientID',
     async () => {
-      const clientId = await inputCommands.twitchClientID()
-      if (clientId) {
-        localConfig.set(TWITCH_CLIENT_ID, clientId)
+      const twitchClientID = await inputCommands.twitchClientID()
+      if (twitchClientID) {
+        localConfig.set(TWITCH_CLIENT_ID, twitchClientID)
         window.showInformationMessage('Twitch Client-ID updated')
       }
     }
@@ -118,7 +134,7 @@ async function activate(context) {
   )
   context.subscriptions.push(explorerReplyCommand)
 
-  if (config.clientID) {
+  if (twitchConfig.clientID) {
     const refreshCommand = commands.registerCommand(
       'twitcher.refreshViewerCount',
       async () => {
@@ -132,8 +148,10 @@ async function activate(context) {
   const switchToUserListCommand = commands.registerCommand(
     'twitcher.switchToUserList',
     async () => {
+      twitcherExplorerProvider.showLoading('Loading User list')
       const userlist = await twitchApi.getViewerList()
-      twitchChatProvider.loadUserList(userlist)
+      twitcherExplorerProvider.hideLoading()
+      twitcherExplorerProvider.loadUserList(userlist)
       twitchStatusBar.setNewCounter(userlist.length)
     }
   )
@@ -163,48 +181,23 @@ async function activate(context) {
     window.showInformationMessage(`Connected to: ${twitcherConfig.channel}`)
   })
 
-  let soundFile = resolve(
-    __dirname,
-    '..',
-    'resources',
-    'audio',
-    'new_message.wav'
-  )
-  if (typeof twitcherConfig.notificationSound !== 'boolean') {
-    soundFile = resolve(twitcherConfig.notificationSound)
-  }
-
   bot.on('message', async (channel, userstate, message, self) => {
-    if (self && !twitcherConfig.debug) return
     //Todo: Add Filter
     switch (userstate['message-type']) {
       case 'chat':
-        if (twitcherConfig.notificationSound) {
-          twitchChatProvider.addChatItem(userstate.username, message)
+        twitcherExplorerProvider.addChatItem(userstate.username, message)
 
-          await player.play({
-            path: soundFile
-          })
-        }
-
-        const reply = await window.showInformationMessage(
-          `${userstate.username}: ${message}`,
-          {
-            title: 'reply'
-          }
-        )
-
-        if (reply) {
-          const replyText = await window.showInputBox({
-            prompt: `@${userstate.username}`
-          })
+        if (!self) {
+          const replyText = await notification.showNotifcation(
+            userstate.username,
+            message
+          )
           if (!replyText) return
           bot.say(
             twitcherConfig.channel,
             `@${userstate.username}: ${replyText}`
           )
         }
-
         break
     }
   })
@@ -240,7 +233,7 @@ const inputCommands = {
     })
   }
 }
-// this method is called when your extension is deactivated
+
 function deactivate() {
   if (viewerCountUpdater) {
     clearInterval(viewerCountUpdater)

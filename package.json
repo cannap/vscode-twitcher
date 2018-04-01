@@ -2,7 +2,7 @@
   "name": "twitcher",
   "displayName": "Twitcher",
   "description": "A Simple Chat for Twitch",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "publisher": "renkalabs",
   "engines": {
     "vscode": "^1.21.0"
@@ -30,7 +30,6 @@
           "when": "view == twitcher",
           "group": "navigation"
         },
-
         {
           "command": "twitcher.switchToChat",
           "when": "view == twitcher",
@@ -133,6 +132,12 @@
           "default": false,
           "description": "Show Userlist in Sidebar"
         },
+        "twitcher.highlightWords": {
+          "type": "array",
+          "default": [],
+          "description":
+            "enable notifcations on words example: [\"cannap\", \"@cannap\"]"
+        },
         "twitcher.notificationSound": {
           "type": ["boolean", "string"],
           "default": true,
@@ -169,15 +174,11 @@
     "vscode": "^1.1.6"
   },
   "dependencies": {
-    "application-config-path": "^0.1.0",
     "axios": "^0.18.0",
     "configstore": "^3.1.2",
     "lodash": "^4.17.5",
     "ms": "^2.1.1",
-    "node-lame": "^1.0.6",
     "node-wav-player": "0.0.1",
-    "play-sound": "^1.1.2",
-    "tmi.js": "^1.2.1",
-    "twitch-bot": "^1.2.5"
+    "tmi.js": "^1.2.1"
   }
 }

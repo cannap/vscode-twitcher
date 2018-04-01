@@ -1,5 +1,13 @@
 # Change Log
 
+## 1.3.0
+
+* 📦 Added new Setting for Notification `twitcher.highlightWords` which will takes an array `["@yourName", "cannap"]` you get Notifications only when the message matches any word in the list
+* 👌 Added Feedback when you want to load the Userlist
+* 👌 Notification Sound should now be disabled when you pass false when true it uses inbuild sound when string it tries to play when fails you will get a errorMessage wrong path
+* 🐛 When Stream is offline the View counter will be 0(Offline)
+* 🐛 Own Messages will now show in the Twitch chat explorer
+
 ## 1.2.0
 
 * 📦 Viewerlist in Explorer

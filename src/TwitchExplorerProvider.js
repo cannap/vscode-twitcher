@@ -5,12 +5,22 @@ module.exports = class TwitchChatView {
     this.chatlog = []
     this.userList = []
     this.userListEnabled = false
+    this.isLoading = false
     this._onDidChangeTreeData = new EventEmitter()
     this.onDidChangeTreeData = this._onDidChangeTreeData.event
   }
 
   refresh() {
     this._onDidChangeTreeData.fire()
+  }
+
+  showLoading(message = 'Loading') {
+    this.isLoading = message
+    this.refresh()
+  }
+  hideLoading() {
+    this.isLoading = false
+    this.refresh()
   }
 
   addChatItem(user, message) {
@@ -25,7 +35,10 @@ module.exports = class TwitchChatView {
     treeItem.tooltip = formatedMessage
 
     this.chatlog.push(treeItem)
-    this.refresh()
+    //We dont need to Refresh when userlist is active
+    if (!this.userListEnabled) {
+      this.refresh()
+    }
   }
 
   loadUserList(userList) {
@@ -44,6 +57,12 @@ module.exports = class TwitchChatView {
     return element
   }
   getChildren() {
+    if (this.isLoading) {
+      return new Promise(resolve => {
+        resolve([new TreeItem(this.isLoading, TreeItemCollapsibleState.None)])
+      })
+    }
+
     if (!this.userListEnabled) {
       return new Promise(resolve => resolve(this.chatlog.slice().reverse()))
     } else {

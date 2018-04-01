@@ -1,8 +1,8 @@
-# Twitcher (wip)
+# 🎥 Twitcher (wip)
 
 Add simple Twitch Chat to Vscode in Explorer
 
-## Features
+## 🌟 Features
 
 (insert gif here)
 
@@ -40,6 +40,7 @@ after settings updated you need to restart vscode
 | `twitcher.enabled`               | true    | Disable Extension                                                     |          |
 | `twitcher.notificationSound`     | true    | true(plays build in sound) or string which points to a `.wav` file    |          |
 | `twitcher.hideStatusBar`         | false   | hides Twitch viewer count                                             |          |
+| `twitcher.highlightWords`        | []      | an array for notification `["hello", "@username"]`                    |          |
 | `twitcher.counterUpdateInterval` | 3m      | Disable with false or set a other interval `10m` for every 10 minutes |          |
 
 ## ⌨️ Commands

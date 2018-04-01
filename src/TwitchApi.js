@@ -35,15 +35,11 @@ module.exports = class TwitchApi {
     return this.lastResponse
   }
   async getViewerCount() {
-    const { data: { data } } = await this.http(
+    const { data } = await this.http(
       `streams?first=1&user_login=${this.loginUser}`
     )
 
-    if (data.lenght !== 0) {
-      return data[0].viewer_count
-    } else {
-      return 'Stream Offline'
-    }
+    return get(data, 'data[0].viewer_count', '0 (offline)')
   }
 
   async getViewerList() {
@@ -51,6 +47,6 @@ module.exports = class TwitchApi {
       `https://tmi.twitch.tv/group/user/${this.loginUser}/chatters`
     )
 
-    return get(result, 'data.chatters.viewers', [])
+    return get(result, 'data.chatters.viewers', ['Stream Offline'])
   }
 }
